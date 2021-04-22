@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>PostgreSQL9.6 オンラインバックアップ手順書.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="postgresql96-%E3%82%AA%E3%83%B3%E3%83%A9%E3%82%A4%E3%83%B3%E3%83%90%E3%83%83%E3%82%AF%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8">PostgreSQL9.6 オンラインバックアップ手順書</h1>
+<ul>
+<li>
+<p>本ドキュメントの作業を行う前提条件</p>
+<ul>
+<li>サーバーOSは、Windows Server 2016,2019を想定しています。</li>
+<li>[推奨]本番 PostgreSQL サーバーと同等のスペックのサーバーをご用意ください。</li>
+<li>[必須]検証 PostgreSQL サーバーへ、本番 PostgreSQL サーバーと同じバージョンの PostgreSQL をインストールしておいてください。</li>
+<li>[必須]本番 PostgreSQL サーバーと検証 PostgreSQL サーバーは同じネットワークに所属し、接続可能である事をご確認ください。</li>
+</ul>
+</li>
+<li>
+<p>本ドキュメントで使用している用語の説明</p>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">用語</th>
+<th style="text-align:left">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">本番 PostgreSQL サーバー</td>
+<td style="text-align:left">現在運用されている PostgresSQL9.6 データベースサーバー</td>
+</tr>
+<tr>
+<td style="text-align:left">検証 PostgreSQL サーバー</td>
+<td style="text-align:left">新規作成する PostgreSQL9.6 データベースサーバー。バックアップ復元先。</td>
+</tr>
+<tr>
+<td style="text-align:left">pg_basebackup</td>
+<td style="text-align:left">PostgreSQL ビルトインコマンド。データベースファイルのバックアップを行う。</td>
+</tr>
+<tr>
+<td style="text-align:left">pg_dump</td>
+<td style="text-align:left">PostgreSQL ビルトインコマンド。論理バックアップを行う。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="%E6%9C%AC%E7%95%AA-postgresql-%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC-%E3%81%AE%E8%A8%AD%E5%AE%9A">本番 PostgreSQL サーバー の設定</h2>
+<ul>
+<li>[必須]管理者ユーザーのユーザー名とパスワードを用意してください。</li>
+</ul>
+<h3 id="%E4%BB%BB%E6%84%8F%E3%83%AC%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E4%BD%9C%E6%88%90">[任意]レプリケーションユーザー作成</h3>
+<pre class="hljs"><code><div><span class="hljs-comment">-- [任意] リモートバックアップを行わない場合は不要です。</span>
+<span class="hljs-comment">-- パフォーマンス計測のために、REPLICATION データベースへ接続するためのユーザーを作成</span>
+<span class="hljs-comment">-- 特殊なユーザー、普段は使いません。パスワードも設定しません。</span>
+<span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">USER</span> perftest <span class="hljs-keyword">WITH</span> <span class="hljs-keyword">REPLICATION</span>
+</div></code></pre>
+<h3 id="postgresqlconf-pghbaconf-%E3%81%AE%E7%A2%BA%E8%AA%8D">postgresql.conf, pg_hba.conf の確認</h3>
+<ul>
+<li>
+<p>下記の設定(postgresql.conf,pg_hba.conf)が行われていることが必要です。</p>
+</li>
+<li>
+<p>設定がない場合は、conf ファイルを編集し、PostgreSQL Service を !!! 再起動 !!! してください。</p>
+</li>
+<li>
+<p>postgresql.conf</p>
+</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment"># [必須]WALの出力レベルを設定、規定値は minimal</span>
+<span class="hljs-attr">wal_level</span> = replica
+
+<span class="hljs-comment"># [必須]pg_basebackup を実行するために 1 以上にする。データベースをレプリケーションする場合は、standbyサーバー数に合わせて変更する</span>
+<span class="hljs-attr">max_wal_senders</span> = <span class="hljs-number">1</span>
+
+<span class="hljs-comment"># [任意] 設定されていなくても大丈夫です。</span>
+<span class="hljs-attr">archive_mode</span> = <span class="hljs-string">'on'</span>
+<span class="hljs-attr">archive_command</span> = <span class="hljs-string">'copy "%p" "C:\\tmp\\archivelog\\%f"'</span>
+</div></code></pre>
+<ul>
+<li>pg_hba.conf</li>
+<li>このファイルには、REPLICATIONデータベースという特殊なデータベースに接続するためのユーザを定義しています。</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment"># TYPE  DATABASE        USER            ADDRESS                 METHOD</span>
+
+<span class="hljs-comment"># IPv4 local connections:</span>
+host    all             all             127.0.0.1/32            md5
+<span class="hljs-comment"># IPv6 local connections:</span>
+host    all             all             ::1/128                 md5
+
+<span class="hljs-comment"># Allow replication connections from localhost, by a user with the replication privilege.</span>
+<span class="hljs-comment"># 本番 PostgreSQL サーバーで実施する場合</span>
+host    replication     postgres        127.0.0.1/32            md5
+host    replication     postgres        ::1/128                 md5
+<span class="hljs-comment"># [任意]検証 PostgreSQL サーバーからリモートで実施する場合</span>
+<span class="hljs-comment"># trust とすることでパスワード無しで接続</span>
+host    replication     perftest        &lt;検証 PostgreSQL サーバーのIP&gt;/32          trust
+</div></code></pre>
+<h2 id="%E6%9C%AC%E7%95%AA-postgresql-%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E3%83%90%E3%83%83%E3%82%AF%E3%82%A2%E3%83%83%E3%83%97%E5%AE%9F%E8%A1%8C">本番 PostgreSQL サーバーバックアップ実行</h2>
+<ul>
+<li>バックアップはオンラインバックアップです。本番サーバーを停止する必要はありません。</li>
+<li>バックアップ処理は低負荷ですが、安全のため業務が行われていない時間帯を設定することを推奨します。</li>
+<li>念のため論理バックアップ（pg_dump）を取得してから行ってください。</li>
+<li>pg_basebackup の実行は「本番 PostgreSQL サーバー」で行う方法と、「検証 PostgreSQL サーバー」からリモートで行う方法があります。</li>
+</ul>
+<h3 id="%E6%9C%AC%E7%95%AA-postgresql-%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E3%81%A7-pgbasebackup-%E3%82%92%E5%AE%9F%E6%96%BD%E3%81%97%E6%A4%9C%E8%A8%BC-postgresql-%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E3%81%B8%E3%83%AC%E3%82%B9%E3%83%88%E3%82%A2%E3%81%99%E3%82%8B">「本番 PostgreSQL サーバー」で pg_basebackup を実施し、「検証 PostgreSQL サーバー」へレストアする</h3>
+<ul>
+<li>バックアップ用のディレクトリを作成する</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment">REM 本番 PostgreSQL サーバーで実施する</span>
+<span class="hljs-comment">
+REM YYYYMMDD 実行日</span>
+<span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">mkdir</span> C:\tmp\PostgreSQL96\backup\YYYYMMDD
+</div></code></pre>
+<ul>
+<li>pg_basebackup を実行する</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment">REM 本番 PostgreSQL サーバーで実施する</span>
+<span class="hljs-comment">
+REM PostgresSQL コマンドのパスが通っていない場合は、下記へカレントディレクトリを変更します。</span>
+<span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">cd</span> C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>\bin
+<span class="hljs-comment">
+REM オンラインバックアップ実行</span>
+<span class="hljs-built_in">cmd</span>&gt; pg_basebackup -R -h localhost -p <span class="hljs-number">5432</span> -U postgres -D "C:\tmp\PostgreSQL96\backup\YYYYMMDD" --xlog --checkpoint=fast --progress
+</div></code></pre>
+<ul>
+<li>検証 PostgreSQL サーバーの PostgreSQL サービスを停止する</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment">REM 検証 PostgreSQL サーバーで実施する</span>
+<span class="hljs-comment">
+REM サービス名は [コントロール パネル] &gt; [システムとセキュリティ] &gt; [管理ツール] &gt; [サービス] から確認してください。</span>
+<span class="hljs-comment">REM サービス名は御社の環境を確認してください。</span>
+<span class="hljs-built_in">net</span> stop postgresql-x64-<span class="hljs-number">9</span>.<span class="hljs-number">6</span>
+</div></code></pre>
+<ul>
+<li>
+<p>検証 PostgreSQL サーバーへバックアップファイルを全てコピーする</p>
+<ul>
+<li>「C:\tmp\PostgreSQL96\backup\YYYYMMDD」 を、「検証 PostgreSQL サーバー」の「C:\tmp\PostgreSQL96\backup\」へコピーする</li>
+</ul>
+</li>
+<li>
+<p>検証 PostgreSQL サーバーの「C:\tmp\PostgreSQL96\backup\YYYYMMDD」配下の設定ファイルを編集する</p>
+</li>
+<li>
+<p>postgresql.conf ファイルを編集する</p>
+</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment"># postgresql.conf</span>
+<span class="hljs-attr">hot_standby</span> = <span class="hljs-string">'off'</span>
+</div></code></pre>
+<ul>
+<li>recovery.conf ファイルを編集する</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment"># recovery.conf</span>
+<span class="hljs-attr">standby_mode</span> = <span class="hljs-string">'off'</span>
+<span class="hljs-attr">primary_conninfo</span> = <span class="hljs-string">'host=localhost port=5432 user=postgres password=&lt;password&gt;'</span>
+<span class="hljs-attr">recovery_target_timeline</span>=<span class="hljs-string">'latest'</span>
+<span class="hljs-attr">restore_command</span> = <span class="hljs-string">'copy "%p" "C:\\tmp\\archivelog\\%f"'</span>
+</div></code></pre>
+<ul>
+<li>ダミーアーカイブフォルダ作成</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment">REM 検証 PostgreSQL サーバーで実施する</span>
+<span class="hljs-comment">
+REM レストア用のダミーディレクトリを作成する(アーカイブモードが'no'の場合 restore_command の指定をダミーフォルダにする)</span>
+<span class="hljs-comment">REM restore_command パラメータに関係します。</span>
+
+<span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">mkdir</span> C:\tmp\archivelog
+<span class="hljs-comment">
+REM ※archive_mode = 'on' で運用されている場合は、archive_command で退避しているWALアーカイブを</span>
+<span class="hljs-comment">REM 　上記のフォルダへコピーしておく。</span>
+</div></code></pre>
+<ul>
+<li>検証 PostgreSQL サーバーの「C:\tmp\PostgreSQL96\backup\YYYYMMDD\」は以下のファイル／フォルダを全てコピーする。</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">cd</span> C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>
+<span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">xcopy</span> C:\tmp\PostgreSQL96\backup\YYYYMMDD data /E /Y /I /D
+</div></code></pre>
+<ul>
+<li>サービスを起動する</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-built_in">net</span> <span class="hljs-built_in">start</span> postgresql-x64-<span class="hljs-number">9</span>.<span class="hljs-number">6</span>
+</div></code></pre>
+<ul>
+<li>動作を確認する
+<ul>
+<li>[スタートメニュー] &gt; [PostgreSQL9.6] &gt; [SQL Shell (psql)] などを使用して、SELECT文を実行してみる</li>
+</ul>
+</li>
+</ul>
+<h3 id="2%E5%9B%9E%E7%9B%AE%E4%BB%A5%E9%99%8D%E3%81%AE%E3%83%AC%E3%82%B9%E3%83%88%E3%82%A2%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6">2回目以降のレストアについて</h3>
+<ul>
+<li>
+<p>性能検証テスト実施後に、検証 PostgreSQL サーバーを初期状態煮物どすには、以下の手順を実施します。</p>
+</li>
+<li>
+<p>検証 PostgreSQL サーバーの PostgreSQL サービスを停止する</p>
+</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment">REM 検証 PostgreSQL サーバーで実施する</span>
+<span class="hljs-comment">
+REM サービス名は [コントロール パネル] &gt; [システムとセキュリティ] &gt; [管理ツール] &gt; [サービス] から確認してください。</span>
+<span class="hljs-comment">REM サービス名は御社の環境を確認してください。</span>
+<span class="hljs-built_in">net</span> stop postgresql-x64-<span class="hljs-number">9</span>.<span class="hljs-number">6</span>
+</div></code></pre>
+<ul>
+<li>検証 PostgreSQL サーバーの PostgreSQL9.6 インストール既定のデータベースフォルダ以下ファイル／フォルダを全て削除</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment">REM PostgreSQL9.6 インストール既定のデータベースフォルダ以下ファイル／フォルダを全て削除</span>
+<span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">del</span> /q "C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>\data\*"
+<span class="hljs-built_in">cmd</span>&gt; <span class="hljs-keyword">for</span> /d %p <span class="hljs-keyword">in</span> ("C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>\data\*.*") <span class="hljs-keyword">do</span> <span class="hljs-built_in">rmdir</span> "%p" /s /q
+</div></code></pre>
+<ul>
+<li>検証 PostgreSQL サーバーの「C:\tmp\PostgreSQL96\backup\YYYYMMDD\」は以下のファイル／フォルダを全てコピーする。</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">cd</span> C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>
+<span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">xcopy</span> C:\tmp\PostgreSQL96\backup\YYYYMMDD data /E /Y /I /D
+</div></code></pre>
+<ul>
+<li>サービスを起動する</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-built_in">net</span> <span class="hljs-built_in">start</span> postgresql-x64-<span class="hljs-number">9</span>.<span class="hljs-number">6</span>
+</div></code></pre>
+<ul>
+<li>動作を確認する
+<ul>
+<li>[スタートメニュー] &gt; [PostgreSQL9.6] &gt; [SQL Shell (psql)] などを使用して、SELECT文を実行してみる</li>
+</ul>
+</li>
+</ul>
+<h3 id="%E4%BB%BB%E6%84%8F%E6%A4%9C%E8%A8%BC-postgresql-%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E3%81%8B%E3%82%89%E3%83%AA%E3%83%A2%E3%83%BC%E3%83%88%E3%81%A7%E5%AE%9F%E6%96%BD%E3%81%99%E3%82%8B">[任意]検証 PostgreSQL サーバーからリモートで実施する</h3>
+<ul>
+<li>PostgresSQL サービスを停止する</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment">REM サービス名は [コントロール パネル] &gt; [システムとセキュリティ] &gt; [管理ツール] &gt; [サービス] から確認してください。</span>
+<span class="hljs-comment">REM サービス名は御社の環境を確認してください。</span>
+<span class="hljs-built_in">net</span> stop postgresql-x64-<span class="hljs-number">9</span>.<span class="hljs-number">6</span>
+</div></code></pre>
+<ul>
+<li>バックアップ実行
+<ul>
+<li>新規作成したデータベースになりますので、「C:\Program Files\PostgreSQL\9.6\data」フォルダ以下のファイル/フォルダすべて削除してください。</li>
+</ul>
+</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment">REM PostgreSQL9.6 インストール既定のデータベースフォルダ以下ファイル／フォルダを全て削除</span>
+<span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">del</span> /q "C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>\data\*"
+<span class="hljs-built_in">cmd</span>&gt; <span class="hljs-keyword">for</span> /d %p <span class="hljs-keyword">in</span> ("C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>\data\*.*") <span class="hljs-keyword">do</span> <span class="hljs-built_in">rmdir</span> "%p" /s /q
+<span class="hljs-comment">REM PostgreSQL9.6 インストール既定のデータベースフォルダにバックアップ</span>
+<span class="hljs-built_in">cmd</span>&gt; pg_basebackup -R -h &lt;本番 PostgreSQL サーバーのIP&gt; -p <span class="hljs-number">5432</span> -U perftest -D "C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>\data" --xlog --checkpoint=fast --progress
+<span class="hljs-comment">REM レストア用のダミーディレクトリを作成する(アーカイブモードが'off'の場合 restore_command の指定をダミーフォルダにする)</span>
+<span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">mkdir</span> C:\tmp\archivelog
+</div></code></pre>
+<ul>
+<li>
+<p>設定ファイルの編集</p>
+<ul>
+<li>postgresql.conf ファイルを編集する</li>
+<li>recovery.conf ファイルを編集する</li>
+</ul>
+</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment"># postgresql.conf</span>
+<span class="hljs-attr">hot_standby</span> = <span class="hljs-string">'off'</span>
+
+<span class="hljs-comment"># recovery.conf</span>
+<span class="hljs-attr">standby_mode</span> = <span class="hljs-string">'off'</span>
+<span class="hljs-attr">primary_conninfo</span> = <span class="hljs-string">'host=localhost port=5432 user=postgres password=&lt;password&gt;'</span>
+<span class="hljs-attr">recovery_target_timeline</span>=<span class="hljs-string">'latest'</span>
+<span class="hljs-attr">restore_command</span> = <span class="hljs-string">'copy "%p" "C:\\tmp\\archivelog\\%f"'</span>
+</div></code></pre>
+<ul>
+<li>サービスを起動する</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-built_in">net</span> <span class="hljs-built_in">start</span> postgresql-x64-<span class="hljs-number">9</span>.<span class="hljs-number">6</span>
+</div></code></pre>
+<ul>
+<li>動作を確認する
+<ul>
+<li>[スタートメニュー] &gt; [PostgreSQL9.6] &gt; [SQL Shell (psql)] などを使用して、SELECT文を実行してみる</li>
+</ul>
+</li>
+</ul>
+
+</body>
+</html>
