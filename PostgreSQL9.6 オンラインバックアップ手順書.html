@@ -517,7 +517,7 @@ REM サービス名は [コントロール パネル] &gt; [システムとセ�
 <span class="hljs-attr">standby_mode</span> = <span class="hljs-string">'off'</span>
 <span class="hljs-attr">primary_conninfo</span> = <span class="hljs-string">'host=localhost port=5432 user=postgres password=&lt;password&gt;'</span>
 <span class="hljs-attr">recovery_target_timeline</span>=<span class="hljs-string">'latest'</span>
-<span class="hljs-attr">restore_command</span> = <span class="hljs-string">'copy "%p" "C:\\tmp\\archivelog\\%f"'</span>
+<span class="hljs-attr">restore_command</span> = <span class="hljs-string">'copy "C:\\tmp\\archivelog\\%f" "%p"'</span>
 </div></code></pre>
 <ul>
 <li>ダミーアーカイブフォルダ作成</li>
@@ -553,7 +553,7 @@ REM ※archive_mode = 'on' で運用されている場合は、archive_command �
 <h3 id="2%E5%9B%9E%E7%9B%AE%E4%BB%A5%E9%99%8D%E3%81%AE%E3%83%AC%E3%82%B9%E3%83%88%E3%82%A2%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6">2回目以降のレストアについて</h3>
 <ul>
 <li>
-<p>性能検証テスト実施後に、検証 PostgreSQL サーバーを初期状態煮物どすには、以下の手順を実施します。</p>
+<p>性能検証テスト実施後に、検証 PostgreSQL サーバーを初期状態にもどすには、以下の手順を実施します。</p>
 </li>
 <li>
 <p>検証 PostgreSQL サーバーの PostgreSQL サービスを停止する</p>
@@ -629,7 +629,7 @@ REM サービス名は [コントロール パネル] &gt; [システムとセ�
 <span class="hljs-attr">standby_mode</span> = <span class="hljs-string">'off'</span>
 <span class="hljs-attr">primary_conninfo</span> = <span class="hljs-string">'host=localhost port=5432 user=postgres password=&lt;password&gt;'</span>
 <span class="hljs-attr">recovery_target_timeline</span>=<span class="hljs-string">'latest'</span>
-<span class="hljs-attr">restore_command</span> = <span class="hljs-string">'copy "%p" "C:\\tmp\\archivelog\\%f"'</span>
+<span class="hljs-attr">restore_command</span> = <span class="hljs-string">'copy "C:\\tmp\\archivelog\\%f" "%p"'</span>
 </div></code></pre>
 <ul>
 <li>サービスを起動する</li>

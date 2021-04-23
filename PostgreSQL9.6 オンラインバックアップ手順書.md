@@ -125,7 +125,7 @@ hot_standby = 'off'
 standby_mode = 'off'
 primary_conninfo = 'host=localhost port=5432 user=postgres password=<password>'
 recovery_target_timeline='latest'
-restore_command = 'copy "%p" "C:\\tmp\\archivelog\\%f"'
+restore_command = 'copy "C:\\tmp\\archivelog\\%f" "%p"'
 ```
 
 * ダミーアーカイブフォルダ作成
@@ -232,7 +232,7 @@ hot_standby = 'off'
 standby_mode = 'off'
 primary_conninfo = 'host=localhost port=5432 user=postgres password=<password>'
 recovery_target_timeline='latest'
-restore_command = 'copy "%p" "C:\\tmp\\archivelog\\%f"'
+restore_command = 'copy "C:\\tmp\\archivelog\\%f" "%p"'
 ```
 
 * サービスを起動する
