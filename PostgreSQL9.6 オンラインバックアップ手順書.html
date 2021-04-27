@@ -404,6 +404,14 @@ code {
 <td style="text-align:left">pg_dump</td>
 <td style="text-align:left">PostgreSQL ビルトインコマンド。論理バックアップを行う。</td>
 </tr>
+<tr>
+<td style="text-align:left">replication</td>
+<td style="text-align:left">ビルトインデータベース。レプリケーション用の特別なデータベース。</td>
+</tr>
+<tr>
+<td style="text-align:left">rep_admin</td>
+<td style="text-align:left">レプリケーション用のユーザー。REPLICATIONロールを持ち、パスワード無しで特定のサーバーからのみ接続するユーザー。</td>
+</tr>
 </tbody>
 </table>
 <h2 id="%E6%9C%AC%E7%95%AA-postgresql-%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC-%E3%81%AE%E8%A8%AD%E5%AE%9A">本番 PostgreSQL サーバー の設定</h2>
@@ -414,7 +422,7 @@ code {
 <pre class="hljs"><code><div><span class="hljs-comment">-- [任意] リモートバックアップを行わない場合は不要です。</span>
 <span class="hljs-comment">-- パフォーマンス計測のために、REPLICATION データベースへ接続するためのユーザーを作成</span>
 <span class="hljs-comment">-- 特殊なユーザー、普段は使いません。パスワードも設定しません。</span>
-<span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">USER</span> perftest <span class="hljs-keyword">WITH</span> <span class="hljs-keyword">REPLICATION</span>
+<span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">USER</span> rep_admin <span class="hljs-keyword">WITH</span> <span class="hljs-keyword">REPLICATION</span>
 </div></code></pre>
 <h3 id="postgresqlconf-pghbaconf-%E3%81%AE%E7%A2%BA%E8%AA%8D">postgresql.conf, pg_hba.conf の確認</h3>
 <ul>
@@ -455,7 +463,7 @@ host    replication     postgres        127.0.0.1/32            md5
 host    replication     postgres        ::1/128                 md5
 <span class="hljs-comment"># [任意]検証 PostgreSQL サーバーからリモートで実施する場合</span>
 <span class="hljs-comment"># trust とすることでパスワード無しで接続</span>
-host    replication     perftest        &lt;検証 PostgreSQL サーバーのIP&gt;/32          trust
+host    replication     rep_admin        &lt;検証 PostgreSQL サーバーのIP&gt;/32          trust
 </div></code></pre>
 <h2 id="%E6%9C%AC%E7%95%AA-postgresql-%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E3%83%90%E3%83%83%E3%82%AF%E3%82%A2%E3%83%83%E3%83%97%E5%AE%9F%E8%A1%8C">本番 PostgreSQL サーバーバックアップ実行</h2>
 <ul>
@@ -518,6 +526,21 @@ REM サービス名は [コントロール パネル] &gt; [システムとセ�
 <span class="hljs-attr">primary_conninfo</span> = <span class="hljs-string">'host=localhost port=5432 user=postgres password=&lt;password&gt;'</span>
 <span class="hljs-attr">recovery_target_timeline</span>=<span class="hljs-string">'latest'</span>
 <span class="hljs-attr">restore_command</span> = <span class="hljs-string">'copy "C:\\tmp\\archivelog\\%f" "%p"'</span>
+
+<span class="hljs-comment">#------------------------------------------------------------------------------</span>
+<span class="hljs-comment"># RESOURCE USAGE (except WAL)</span>
+<span class="hljs-comment">#------------------------------------------------------------------------------</span>
+<span class="hljs-attr">shared_preload_libraries</span> = <span class="hljs-string">'pg_stat_statements'</span>
+<span class="hljs-comment">#------------------------------------------------------------------------------</span>
+<span class="hljs-comment"># CUSTOMIZED OPTIONS</span>
+<span class="hljs-comment">#------------------------------------------------------------------------------</span>
+<span class="hljs-attr">pg_stat_statements.max</span> = <span class="hljs-number">1000</span>
+<span class="hljs-attr">pg_stat_statements.track</span> = all  <span class="hljs-comment"># top</span>
+<span class="hljs-attr">pg_stat_statements.save</span> = <span class="hljs-literal">on</span>
+<span class="hljs-comment">#------------------------------------------------------------------------------</span>
+<span class="hljs-comment"># RUNTIME STATISTICS</span>
+<span class="hljs-comment">#------------------------------------------------------------------------------</span>
+<span class="hljs-attr">track_functions</span> = all <span class="hljs-comment"># none, pl, all</span>
 </div></code></pre>
 <ul>
 <li>ダミーアーカイブフォルダ作成</li>
@@ -609,7 +632,7 @@ REM サービス名は [コントロール パネル] &gt; [システムとセ�
 <span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">del</span> /q "C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>\data\*"
 <span class="hljs-built_in">cmd</span>&gt; <span class="hljs-keyword">for</span> /d %p <span class="hljs-keyword">in</span> ("C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>\data\*.*") <span class="hljs-keyword">do</span> <span class="hljs-built_in">rmdir</span> "%p" /s /q
 <span class="hljs-comment">REM PostgreSQL9.6 インストール既定のデータベースフォルダにバックアップ</span>
-<span class="hljs-built_in">cmd</span>&gt; pg_basebackup -R -h &lt;本番 PostgreSQL サーバーのIP&gt; -p <span class="hljs-number">5432</span> -U perftest -D "C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>\data" --xlog --checkpoint=fast --progress
+<span class="hljs-built_in">cmd</span>&gt; pg_basebackup -R -h &lt;本番 PostgreSQL サーバーのIP&gt; -p <span class="hljs-number">5432</span> -U rep_admin -D "C:\Program Files\PostgreSQL\<span class="hljs-number">9</span>.<span class="hljs-number">6</span>\data" --xlog --checkpoint=fast --progress
 <span class="hljs-comment">REM レストア用のダミーディレクトリを作成する(アーカイブモードが'off'の場合 restore_command の指定をダミーフォルダにする)</span>
 <span class="hljs-built_in">cmd</span>&gt; <span class="hljs-built_in">mkdir</span> C:\tmp\archivelog
 </div></code></pre>

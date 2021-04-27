@@ -14,6 +14,8 @@
 | 検証 PostgreSQL サーバー | 新規作成する PostgreSQL9.6 データベースサーバー。バックアップ復元先。 |
 | pg_basebackup | PostgreSQL ビルトインコマンド。データベースファイルのバックアップを行う。 |
 | pg_dump | PostgreSQL ビルトインコマンド。論理バックアップを行う。 |
+| replication | ビルトインデータベース。レプリケーション用の特別なデータベース。 |
+| rep_admin | レプリケーション用のユーザー。REPLICATIONロールを持ち、パスワード無しで特定のサーバーからのみ接続するユーザー。 |
 
 ## 本番 PostgreSQL サーバー の設定
 
@@ -25,7 +27,7 @@
 -- [任意] リモートバックアップを行わない場合は不要です。
 -- パフォーマンス計測のために、REPLICATION データベースへ接続するためのユーザーを作成
 -- 特殊なユーザー、普段は使いません。パスワードも設定しません。
-CREATE USER perftest WITH REPLICATION
+CREATE USER rep_admin WITH REPLICATION
 ```
 
 ### postgresql.conf, pg_hba.conf の確認
@@ -64,7 +66,7 @@ host    replication     postgres        127.0.0.1/32            md5
 host    replication     postgres        ::1/128                 md5
 # [任意]検証 PostgreSQL サーバーからリモートで実施する場合
 # trust とすることでパスワード無しで接続
-host    replication     perftest        <検証 PostgreSQL サーバーのIP>/32          trust
+host    replication     rep_admin        <検証 PostgreSQL サーバーのIP>/32          trust
 ```
 
 ## 本番 PostgreSQL サーバーバックアップ実行
@@ -126,6 +128,21 @@ standby_mode = 'off'
 primary_conninfo = 'host=localhost port=5432 user=postgres password=<password>'
 recovery_target_timeline='latest'
 restore_command = 'copy "C:\\tmp\\archivelog\\%f" "%p"'
+
+#------------------------------------------------------------------------------
+# RESOURCE USAGE (except WAL)
+#------------------------------------------------------------------------------
+shared_preload_libraries = 'pg_stat_statements'
+#------------------------------------------------------------------------------
+# CUSTOMIZED OPTIONS
+#------------------------------------------------------------------------------
+pg_stat_statements.max = 1000
+pg_stat_statements.track = all  # top
+pg_stat_statements.save = on
+#------------------------------------------------------------------------------
+# RUNTIME STATISTICS
+#------------------------------------------------------------------------------
+track_functions = all # none, pl, all
 ```
 
 * ダミーアーカイブフォルダ作成
@@ -214,7 +231,7 @@ REM PostgreSQL9.6 インストール既定のデータベースフォルダ以下ファイル／フォルダを
 cmd> del /q "C:\Program Files\PostgreSQL\9.6\data\*"
 cmd> for /d %p in ("C:\Program Files\PostgreSQL\9.6\data\*.*") do rmdir "%p" /s /q
 REM PostgreSQL9.6 インストール既定のデータベースフォルダにバックアップ
-cmd> pg_basebackup -R -h <本番 PostgreSQL サーバーのIP> -p 5432 -U perftest -D "C:\Program Files\PostgreSQL\9.6\data" --xlog --checkpoint=fast --progress
+cmd> pg_basebackup -R -h <本番 PostgreSQL サーバーのIP> -p 5432 -U rep_admin -D "C:\Program Files\PostgreSQL\9.6\data" --xlog --checkpoint=fast --progress
 REM レストア用のダミーディレクトリを作成する(アーカイブモードが'off'の場合 restore_command の指定をダミーフォルダにする)
 cmd> mkdir C:\tmp\archivelog
 ```
